@@ -200,6 +200,7 @@ void *handleIncomingRequests(void *x)
       }
       break;
     }
+    close(clientSocket);
 
     // printf("SERVER: Closing client connection.\n");
     // close(clientSocket); // Close this client's socket

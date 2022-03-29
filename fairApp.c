@@ -85,7 +85,7 @@ int main()
 	// ...
 	for (int i = 0; i< NUM_RIDES;i++){
 		((Ride *)&rideThreads[i])->status = OFF_LINE;
-		free(&(ottawaFair.rides[i]).riders);
+		free(((ottawaFair.rides[i]).riders));
 	}
 
 	// Kill all the guest processes for any guests remaining

@@ -155,25 +155,26 @@ void main(int argc, char *argv[])
 			if (buffer[0] == '1')
 			{
 				ticketNum -= tickets[rideId];
-				// Wait until the ride has boarded this guest, completed the ride and unboarded the guest
+				printf("Tickets left: %d\n", ticketNum);
+				// int waitTime = atoi(buffer + 1);
+				// printf("sleep time %d\n", waitTime);
+				// usleep(waitTime / 10);
 				wait = 2;
 
-				while (wait == 2)
-				{
-					printf("waiting 2\n");
-					sleep(1);
-				}
-				while (wait == 1)
-				{
-					printf("waiting 1\n");
-					sleep(1);
-				}
+				while (wait == 2);
+				// wait for board
+
+				while (wait == 1);
+				// wait for unboard
 			}
 		}
 
+		// Wait until the ride has boarded this guest, completed the ride and unboarded the guest
+
+		//?? usleap or sleep very long wait for sleep
+
 		// Delay a bit (DO NOT CHANGE THIS LINE)
 		usleep(100000);
-		// usleep(1000000);
 		rideId = rand() % NUM_RIDES;
 		// ...
 	}

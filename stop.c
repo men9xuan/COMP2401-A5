@@ -9,6 +9,40 @@
 #include "fair.h"
 
 // This program stops the Fair server
-void main() {
+void main()
+{
 	// WRITE ALL THE NECESSARY CODE
+	int clientSocket;
+	struct sockaddr_in serverAddress;
+	int status, bytesRcv;
+	char outStr[80];  // stores guest request
+	char buffer[200]; //
+	// Create the client socket
+	clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (clientSocket < 0)
+	{
+		printf("*** CLIENT ERROR: Could not open socket.\n");
+		exit(-1);
+	}
+	// Setup address
+	memset(&serverAddress, 0, sizeof(serverAddress));
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = inet_addr(SERVER_IP);
+	serverAddress.sin_port = htons((unsigned short)SERVER_PORT);
+	// Connect to server
+	status = connect(clientSocket, (struct sockaddr *)&serverAddress,
+					 sizeof(serverAddress));
+	if (status < 0)
+	{
+		printf("*** CLIENT ERROR: Could not connect.\n");
+		exit(-1);
+	}
+
+	sprintf(outStr, "%d", SHUTDOWN);
+	strcpy(buffer, outStr);
+	printf("CLIENT: Sending \"%s\" to server.\n", buffer);
+
+	send(clientSocket, &buffer, strlen(buffer), 0);
+	// bytesRcv = recv(clientSocket, buffer, 200, 0);
+	return;
 }
