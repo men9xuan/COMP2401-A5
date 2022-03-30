@@ -70,13 +70,13 @@ void *handleIncomingRequests(void *x)
   }
 
   addrSize = sizeof(clientAddress);
-  clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
-  if (clientSocket < 0)
-  {
-    printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
-    exit(-1);
-  }
-  printf("SERVER: Received client connection.\n");
+  // clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
+  // if (clientSocket < 0)
+  // {
+  //   printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
+  //   exit(-1);
+  // }
+  // printf("SERVER: Received client connection.\n");
 
   // Wait for clients now
   int run = 1;
@@ -85,17 +85,18 @@ void *handleIncomingRequests(void *x)
   while (run)
   {
     // Go into infinite loop to talk to client
-    // printf("running\n");
+    printf("Waiting for client\n");
     // Get the message from the client
-    // clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
-    bytesRcv = recv(clientSocket, buffer, sizeof(buffer), 0);
-    buffer[bytesRcv] = 0; // put a 0 (== \n) at the end so we can display the string
+    clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
     if (clientSocket < 0)
     {
       printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
       exit(-1);
     }
-    // printf("SERVER: Received client request: %s\n", buffer);
+    bytesRcv = recv(clientSocket, buffer, sizeof(buffer), 0);
+    buffer[bytesRcv] = 0; // put a 0 (== \n) at the end so we can display the string
+
+    printf("SERVER: Received client request: %s\n", buffer);
     // // ip address
     // char *s = inet_ntoa(clientAddress.sin_addr);
     // printf("IP address: %s\n", s);
@@ -127,7 +128,9 @@ void *handleIncomingRequests(void *x)
           sprintf(outStr + strlen(outStr), "%s", oFair->rides[i].name);
           sprintf(outStr + strlen(outStr), " %d ", oFair->rides[i].ticketsRequired);
         }
+        // printf("before\n");
         send(clientSocket, outStr, strlen(outStr), 0);
+        printf("after\n");
       }
       else
       {
@@ -143,6 +146,8 @@ void *handleIncomingRequests(void *x)
       printf("ride Id: %d\n", rideId);
       int waitTime = (oFair->rides[rideId].lineupSize) / (oFair->rides[rideId].capacity) *
                      ((oFair->rides[rideId].onOffTime) + (oFair->rides[rideId].waitTime) + (oFair->rides[rideId].rideTime));
+      printf("lineupSize: %d\n", oFair->rides[rideId].lineupSize);      
+      printf("Wait time: %d\n", waitTime);
       memset(outStr, 0, sizeof(outStr));
       sprintf(outStr + strlen(outStr), "%d", waitTime);
       send(clientSocket, outStr, strlen(outStr), 0);
@@ -157,7 +162,6 @@ void *handleIncomingRequests(void *x)
         oFair->rides[rideId].waitingLine[oFair->rides[rideId].lineupSize] = pid;
         printf("guestId reading: %d\n", oFair->rides[rideId].waitingLine[oFair->rides[rideId].lineupSize]);
         oFair->rides[rideId].lineupSize++;
-        printf("line up size:%d\n", oFair->rides[rideId].lineupSize);
         memset(outStr, 0, sizeof(outStr));
         sprintf(outStr + strlen(outStr), "%d", 1);
         // send back the wait time
@@ -188,18 +192,19 @@ void *handleIncomingRequests(void *x)
           // decrement guest num
           oFair->numGuests--;
           // close clientSocket for current guest and opens a new one
-          close(clientSocket);
-          clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
-          if (clientSocket < 0)
-          {
-            printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
-            exit(-1);
-          }
-          continue;
+          // close(clientSocket);
+          // clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
+          // if (clientSocket < 0)
+          // {
+          //   printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
+          //   exit(-1);
+          // }
+          // continue;
         }
       }
       break;
     }
+    close(clientSocket);
 
     // printf("SERVER: Closing client connection.\n");
     // close(clientSocket); // Close this client's socket
@@ -213,8 +218,8 @@ void *handleIncomingRequests(void *x)
     // if (strcmp(buffer, "stop") == 0)
     //   break;
   }
-  printf("SERVER: Closing client connection.\n");
-  close(clientSocket); // Close this client's socket
+  // printf("SERVER: Closing client connection.\n");
+  // close(clientSocket); // Close this client's socket
   // Don't forget to close the sockets!
   close(serverSocket);
   printf("SERVER: Shutting down.\n");

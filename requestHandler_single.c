@@ -69,14 +69,14 @@ void *handleIncomingRequests(void *x)
     exit(-1);
   }
 
-  addrSize = sizeof(clientAddress);
-  clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
-  if (clientSocket < 0)
-  {
-    printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
-    exit(-1);
-  }
-  printf("SERVER: Received client connection.\n");
+  // addrSize = sizeof(clientAddress);
+  // clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
+  // if (clientSocket < 0)
+  // {
+  //   printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
+  //   exit(-1);
+  // }
+  // printf("SERVER: Received client connection.\n");
 
   // Wait for clients now
   int run = 1;
@@ -84,6 +84,13 @@ void *handleIncomingRequests(void *x)
   int pid;
   while (run)
   {
+    clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
+    if (clientSocket < 0)
+    {
+      printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
+      exit(-1);
+    }
+    // continue;
     // Go into infinite loop to talk to client
     // printf("running\n");
     // Get the message from the client
@@ -188,19 +195,19 @@ void *handleIncomingRequests(void *x)
           // decrement guest num
           oFair->numGuests--;
           // close clientSocket for current guest and opens a new one
-          close(clientSocket);
-          clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
-          if (clientSocket < 0)
-          {
-            printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
-            exit(-1);
-          }
-          continue;
+          // close(clientSocket);
+          // clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
+          // if (clientSocket < 0)
+          // {
+          //   printf("*** SERVER ERROR: Could not accept incoming client connection.\n");
+          //   exit(-1);
+          // }
+          // continue;
         }
       }
       break;
+      close(clientSocket);
     }
-    close(clientSocket);
 
     // printf("SERVER: Closing client connection.\n");
     // close(clientSocket); // Close this client's socket

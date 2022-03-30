@@ -17,6 +17,11 @@
 
 // ch5 pg 203 need a handler
 volatile int wait;
+int clientSocket;
+struct sockaddr_in serverAddress;
+int status, bytesRcv;
+char outStr[80];  // stores guest request
+char buffer[200]; //
 
 void handleSig1(int i)
 {
@@ -27,29 +32,14 @@ void handleSig2(int i)
 	wait--;
 }
 
-void main(int argc, char *argv[])
+void connectServer()
 {
-	// SIGUSR handler
-	signal(SIGUSR1, handleSig1);
-	signal(SIGUSR2, handleSig2);
-
-	// Set the random seed
-	srand(time(NULL));
-
-	// Get the number of tickets, willing wait time and first ride from the command line arguments
-	// ...
-	int ticketNum = atoi(argv[1]);
-	int willWaitTime = atoi(argv[2]);
-	int rideId = atoi(argv[3]);
-
-	int tickets[NUM_RIDES];
-
 	// Set up client server
-	int clientSocket;
-	struct sockaddr_in serverAddress;
-	int status, bytesRcv;
-	char outStr[80];  // stores guest request
-	char buffer[200]; //
+	// int clientSocket;
+	// struct sockaddr_in serverAddress;
+	// int status, bytesRcv;
+	// char outStr[80];  // stores guest request
+	// char buffer[200]; //
 	// Create the client socket
 	clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (clientSocket < 0)
@@ -70,6 +60,32 @@ void main(int argc, char *argv[])
 		printf("*** CLIENT ERROR: Could not connect.\n");
 		exit(-1);
 	}
+}
+
+void main(int argc, char *argv[])
+{
+	// SIGUSR handler
+	signal(SIGUSR1, handleSig1);
+	signal(SIGUSR2, handleSig2);
+
+	// Set the random seed
+	srand(time(NULL));
+
+	// Get the number of tickets, willing wait time and first ride from the command line arguments
+	// ...
+	int ticketNum = atoi(argv[1]);
+	int willWaitTime = atoi(argv[2]);
+	int rideId = atoi(argv[3]);
+
+	int tickets[NUM_RIDES];
+
+	// Set up client server
+	// int clientSocket;
+	// struct sockaddr_in serverAddress;
+	// int status, bytesRcv;
+	// char outStr[80];  // stores guest request
+	// char buffer[200]; //
+	connectServer();
 
 	sprintf(outStr, "%d", ADMIT);
 	sprintf(outStr + strlen(outStr), "%d", getpid());
@@ -78,7 +94,7 @@ void main(int argc, char *argv[])
 
 	send(clientSocket, &buffer, strlen(buffer), 0);
 	bytesRcv = recv(clientSocket, buffer, 200, 0);
-	// close(clientSocket);
+	close(clientSocket);
 
 	// Request a admission to the fair.  If cannot get in (i.e., MAX_GUESTS reached), then quit.
 	if (buffer[0] == '0')
@@ -132,11 +148,12 @@ void main(int argc, char *argv[])
 		strcpy(buffer, outStr);
 		// buffer[2] = 0;
 		printf("Request waitTime: Sending \"%s\" to server.\n", buffer);
+		connectServer();
 		send(clientSocket, buffer, strlen(buffer), 0);
 		// memset(buffer, 0, sizeof(buffer));
 		bytesRcv = recv(clientSocket, buffer, 200, 0);
 		buffer[bytesRcv] = 0;
-
+		close(clientSocket);
 		int waitTime = atoi(buffer);
 		printf("**recived waitTime: %d\n", waitTime);
 		// close(clientSocket);
@@ -149,9 +166,11 @@ void main(int argc, char *argv[])
 			sprintf(outStr + strlen(outStr), "%d", getpid());
 			strcpy(buffer, outStr);
 			printf("requestGetInLine: Sending \"%s\" to server.\n", buffer);
+			connectServer();
 			send(clientSocket, buffer, strlen(buffer), 0);
 			bytesRcv = recv(clientSocket, buffer, 200, 0);
-			buffer[bytesRcv] = 0;
+			// buffer[bytesRcv] = 0;
+			close(clientSocket);
 			if (buffer[0] == '1')
 			{
 				ticketNum -= tickets[rideId];
@@ -160,13 +179,13 @@ void main(int argc, char *argv[])
 
 				while (wait == 2)
 				{
-					printf("waiting 2\n");
+					// printf("waiting 2\n");
 					sleep(1);
 				}
 				while (wait == 1)
 				{
-					printf("waiting 1\n");
-					sleep(1);
+					// printf("waiting 1\n");
+					sleep(1); //???
 				}
 			}
 		}
@@ -184,5 +203,7 @@ void main(int argc, char *argv[])
 	sprintf(outStr + strlen(outStr), "%d", getpid());
 	strcpy(buffer, outStr);
 	printf("LeaveFair: Sending \"%s\" to server.\n", buffer);
+	connectServer();
 	send(clientSocket, buffer, strlen(buffer), 0);
+	close(clientSocket);
 }
