@@ -27,18 +27,28 @@
 //
 //   LEAVE_FAIR - takes a guest's process ID.  It then causes the guest to leave the fair.
 //				  No response is returned.
+sem_t mutex;
+volatile int rideId = -1;
+volatile int pid;
 
 void *handleIncomingRequests(void *x)
 {
   Fair *oFair = (Fair *)x;
-  // Replace the code below with your own code
+
+  // init semaphore
+  if (sem_init(&mutex, 0, 1) < 0)
+  {
+    printf("Error: on semaphore init.\n");
+    exit(1);
+  }
+
   int serverSocket, clientSocket;
   struct sockaddr_in serverAddress, clientAddress;
   int status, addrSize, bytesRcv;
   char inStr[80];
   char buffer[80];
   char outStr[200];
-  // char *response = "OK";
+
   // Create the client socket
   serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket < 0)
@@ -61,8 +71,8 @@ void *handleIncomingRequests(void *x)
     exit(-1);
   }
 
-  // Set up the line-up to handle up to 10 clients
-  status = listen(serverSocket, 10);
+  // Set up the line-up to handle up to 5 clients in line
+  status = listen(serverSocket, 5); //??? 5
   if (status < 0)
   {
     printf("*** SERVER ERROR: Could not listen on socket.\n");
@@ -70,17 +80,14 @@ void *handleIncomingRequests(void *x)
   }
 
   addrSize = sizeof(clientAddress);
-
-
   // Wait for clients now
   printf("Fair server online\n");
   int run = 1;
-  // int rideId = -1;
-  // int pid;
-  // int counter = 0;
+  // volatile int rideId = -1;
+  // volatile int pid;
   while (run)
   {
-    // Get the message from the client
+    // Go into infinite loop to talk to client
     clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &addrSize);
     if (clientSocket < 0)
     {
@@ -88,26 +95,23 @@ void *handleIncomingRequests(void *x)
       exit(-1);
     }
     bytesRcv = recv(clientSocket, buffer, sizeof(buffer), 0);
-    buffer[bytesRcv] = 0; // put a 0 (== \n) at the end so we can display the string
+    buffer[bytesRcv] = 0;
 
     switch (buffer[0] - '0')
     {
-    case SHUTDOWN: 
+    case SHUTDOWN: // gracefully?
       run = 0;
       break;
     case ADMIT:
-    {
       if (((Fair *)x)->numGuests < MAX_GUESTS)
       {
-        // sem_wait(&serverBusyIndicator);
-        int pid = atoi(buffer + 1);
+        pid = atoi(buffer + 1);
         oFair->guestIDs[oFair->numGuests] = pid;
-        // printf("pid: %d\n", pid);
         oFair->numGuests++;
-        // sem_post(&serverBusyIndicator);
 
         // send list of ride names and tickets
-        memset(outStr, 0, sizeof(outStr)); 
+        // clear return message
+        memset(outStr, 0, sizeof(outStr));
         for (int i = 0; i < NUM_RIDES; i++)
         {
           sprintf(outStr + strlen(outStr), "%s", oFair->rides[i].name);
@@ -118,18 +122,24 @@ void *handleIncomingRequests(void *x)
       else
       {
         // not admitted park full
-        // char *response = "0";
-        // send(clientSocket, response, strlen(response), 0);
-        memset(outStr, 0, sizeof(outStr));
-        sprintf(outStr + strlen(outStr), "%d", 0);
-        send(clientSocket, outStr, strlen(outStr), 0);
+        char *response = "0";
+        send(clientSocket, response, strlen(response), 0);
       }
       break;
-    }
     case GET_WAIT_ESTIMATE:
-    { // ..
-      // printf("======\n");
-      int rideId = atoi(buffer + 1);
+      if (sem_wait(&mutex) < 0)
+      {
+        printf("Error: on semaphore wait.\n");
+        exit(1);
+      }
+
+      rideId = atoi(buffer + 1);
+
+      if (sem_post(&mutex) < 0)
+      {
+        printf("Error: on semaphore post.\n");
+        exit(1);
+      }
       // printf("ride Id: %d", rideId);
       int waitTime = (oFair->rides[rideId].lineupSize) / (oFair->rides[rideId].capacity) *
                      ((oFair->rides[rideId].onOffTime) + (oFair->rides[rideId].waitTime) + (oFair->rides[rideId].rideTime));
@@ -139,24 +149,16 @@ void *handleIncomingRequests(void *x)
       sprintf(outStr + strlen(outStr), "%d", waitTime);
       send(clientSocket, outStr, strlen(outStr), 0);
       break;
-    }
 
     case GET_IN_LINE:
-    {
-      int pid = atoi(buffer + 5);
-      int rideId = atoi(buffer + 2);
-      printf("RECEIVED ride ID : %d , GUEST ID : %d\n", rideId, pid);
+      pid = atoi(buffer + 1);
       if (rideId >= 0 && rideId < NUM_RIDES && (oFair->rides[rideId].lineupSize) < MAX_LINEUP)
       {
-        // add to waitingLine
-        // printf("****** guestId:%d ****rideId:%d  \n", pid, rideId);
+        // add guest to waitingLine
         oFair->rides[rideId].waitingLine[oFair->rides[rideId].lineupSize] = pid;
         oFair->rides[rideId].lineupSize++;
         memset(outStr, 0, sizeof(outStr));
         sprintf(outStr + strlen(outStr), "%d", 1);
-        // send back the wait time
-        // printf("countdown time: %d\n", oFair->rides[rideId].countdownTimer);
-        // sprintf(outStr + strlen(outStr), "%d", oFair->rides[rideId].countdownTimer);
         send(clientSocket, outStr, strlen(outStr), 0);
       }
       else
@@ -165,12 +167,10 @@ void *handleIncomingRequests(void *x)
         sprintf(outStr + strlen(outStr), "%d", 0);
         send(clientSocket, outStr, strlen(outStr), 0);
       }
-
       break;
-    }
     case LEAVE_FAIR:
-    { 
-      int pid = atoi(buffer + 1);
+      // printf("Leave Fair\n");
+      pid = atoi(buffer + 1);
       for (int i = 0; i < (oFair->numGuests); i++)
       {
         if (oFair->guestIDs[i] == pid)
@@ -186,10 +186,10 @@ void *handleIncomingRequests(void *x)
       }
       break;
     }
-    }
     close(clientSocket);
   }
-  // close server sockets
+  // printf("SERVER: Closing server socket.\n");
+  // close the sockets
   close(serverSocket);
   printf("SERVER: Shutting down.\n");
 }

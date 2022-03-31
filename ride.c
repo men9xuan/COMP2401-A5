@@ -25,15 +25,15 @@ void *runRide(void *p)
 			// Add code here ...
 			if ((r->lineupSize) > 0)
 			{
-				printf("ride.c lineupsize: %d\n", r->lineupSize);
-				printf("LOADING\n");
+				// printf("ride.c lineupsize: %d\n", r->lineupSize);
+				// printf("LOADING\n");
 				r->status = LOADING;
 				r->countdownTimer = r->onOffTime;
 			}
 			if ((r->numRiders) > 0 && (r->countdownTimer == 0))
 			{
 				r->status = RUNNING;
-				printf("RUNNNING\n");
+				// printf("RUNNNING\n");
 				r->countdownTimer = r->rideTime;
 			}
 			break;
@@ -43,7 +43,7 @@ void *runRide(void *p)
 			if (r->countdownTimer == 0)
 			{
 				riderId = r->waitingLine[0];
-				printf("riderId: %d\n", riderId);
+				// printf("riderId: %d\n", riderId);
 				kill(riderId, SIGUSR1);
 				r->lineupSize--;
 				r->riders[r->numRiders] = riderId;
@@ -55,13 +55,13 @@ void *runRide(void *p)
 				if ((r->numRiders) == (r->capacity))
 				{
 					r->status = RUNNING;
-					printf("RUNNING\n");
+					// printf("RUNNING\n");
 					r->countdownTimer = r->rideTime;
 				}
 				else
 				{
 					r->status = STOPPED;
-					printf("STOPPED\n");
+					// printf("STOPPED\n");
 					r->countdownTimer = r->waitTime;
 				}
 			}
@@ -73,7 +73,7 @@ void *runRide(void *p)
 			if (r->countdownTimer == 0)
 			{
 				r->status = UNLOADING;
-				printf("UNLOADING\n");
+				// printf("UNLOADING\n");
 				r->countdownTimer = r->onOffTime;
 			}
 
@@ -84,8 +84,8 @@ void *runRide(void *p)
 			while ((r->numRiders) > 0 && r->countdownTimer == 0)
 			{
 
-				printf("Unloading...\n");
-				kill(r->riders[0], SIGUSR2);
+				// printf("Unloading...\n");
+				kill(r->riders[0], SIGUSR1);
 				r->numRiders--;
 				for (int i = 0; i < (r->numRiders); i++)
 				{
@@ -106,7 +106,7 @@ void *runRide(void *p)
 			// r->numRiders = 0;
 			if ((r->numRiders) == 0)
 			{
-				printf("STOPPED\n");
+				// printf("STOPPED\n");
 				r->status = STOPPED;
 				r->countdownTimer = r->waitTime;
 			}

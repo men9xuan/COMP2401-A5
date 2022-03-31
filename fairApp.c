@@ -11,6 +11,7 @@
 #include "requestHandler.c"
 #include "display.c"
 
+sem_t   serverBusyIndicator;
 // Initialize a ride
 void initializeRide(Ride *r, char *n, unsigned char tr, unsigned char cap, unsigned char onOff, unsigned short rt, unsigned short wt)
 {
@@ -34,6 +35,8 @@ void initializeRide(Ride *r, char *n, unsigned char tr, unsigned char cap, unsig
 // This is where it all begins
 int main()
 {
+	// Initialize semaphore
+	sem_init(&serverBusyIndicator, 0, 1);
 	// Create a fair with no guests
 	Fair ottawaFair;
 	ottawaFair.numGuests = 0;
@@ -51,21 +54,9 @@ int main()
 	initializeRide(&(ottawaFair.rides[0]), "Tummy Tosser", 5, 6, 7, 60, 30);
 
 	// Start up the ride threads
-	
-	// pthread_t r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
-	// pthread_create(&r0, NULL, runRide, &(ottawaFair.rides[0]));
-	// pthread_create(&r1, NULL, runRide, &(ottawaFair.rides[1]));
-	// pthread_create(&r2, NULL, runRide, &(ottawaFair.rides[2]));
-	// pthread_create(&r3, NULL, runRide, &(ottawaFair.rides[3]));
-	// pthread_create(&r4, NULL, runRide, &(ottawaFair.rides[4]));
-	// pthread_create(&r5, NULL, runRide, &(ottawaFair.rides[5]));
-	// pthread_create(&r6, NULL, runRide, &(ottawaFair.rides[6]));
-	// pthread_create(&r7, NULL, runRide, &(ottawaFair.rides[7]));
-	// pthread_create(&r8, NULL, runRide, &(ottawaFair.rides[8]));
-	// pthread_create(&r9, NULL, runRide, &(ottawaFair.rides[9]));
-
-	pthread_t rideThreads[10]; 
-	for (int i = 0 ; i< NUM_RIDES; i++){
+	pthread_t rideThreads[NUM_RIDES];
+	for (int i = 0; i < NUM_RIDES; i++)
+	{
 		pthread_create(&rideThreads[i], NULL, runRide, &(ottawaFair.rides[i]));
 	}
 
@@ -78,21 +69,35 @@ int main()
 	pthread_create(&display, NULL, showSimulation, &ottawaFair);
 
 	// Wait for the incoming requests thread to complete, from a STOP command
-	// wait for 	pthread_t handle to stop 
+	// wait for 	pthread_t handle to stop
 	pthread_join(handler, NULL);
 
 	// Shutdown the ride threads and free up the riders arrays
 	// ...
-	for (int i = 0; i< NUM_RIDES;i++){
-		((Ride *)&rideThreads[i])->status = OFF_LINE;
+	for (int i = 0; i < NUM_RIDES; i++)
+	{
+		// ((Ride *)&rideThreads[i])->status = OFF_LINE;
+		ottawaFair.rides[i].status = OFF_LINE;
+		pthread_join(rideThreads[i], NULL);
 		free(((ottawaFair.rides[i]).riders));
 	}
+	// pthread_join(display, NULL);
 
 	// Kill all the guest processes for any guests remaining
-	// ... // MAX_GUESTS 
-	for (int i = 0; i < (sizeof(ottawaFair.guestIDs)/sizeof(unsigned int)); i++){
-		kill(ottawaFair.guestIDs[i], SIGKILL); // SIGUSR2 with handler pg204
+	// ... // MAX_GUESTS
+	for (int i = 0; i < ottawaFair.numGuests; i++)
+	{
+		kill(ottawaFair.guestIDs[i], SIGKILL);
 	}
+
+	// free pthreads
+	// pthread_join(display, NULL);
+	// // pthread_exit(&display);
+	// for (int i = 0; i < NUM_RIDES; i++)
+	// {
+	// 	pthread_join(rideThreads[i], NULL);
+	// 	// pthread_exit(&rideThreads[i]);
+	// }
 
 	printf("FAIR APP: ended successfully\n");
 }

@@ -40,9 +40,8 @@ void main()
 
 	sprintf(outStr, "%d", SHUTDOWN);
 	strcpy(buffer, outStr);
-	printf("CLIENT: Sending \"%s\" to server.\n", buffer);
 
 	send(clientSocket, &buffer, strlen(buffer), 0);
-	// bytesRcv = recv(clientSocket, buffer, 200, 0);
+	close(clientSocket);
 	return;
 }

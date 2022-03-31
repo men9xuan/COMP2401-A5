@@ -15,8 +15,7 @@
 // 2 - The maximum time (in seconds) that the guest is willing to wait in line for a ride (e.g., 600 - 1200)
 // 3 - The first ride that this guest wants to go on (i.e., 0 to NUM_RIDES)
 
-// ch5 pg 203 need a handler
-volatile int wait;
+int wait;
 int clientSocket;
 struct sockaddr_in serverAddress;
 int status, bytesRcv;
@@ -32,6 +31,7 @@ void handleSig2(int i)
 	wait--;
 }
 
+// helper function for guest to connect to server
 void connectServer()
 {
 	// Set up client server
@@ -90,7 +90,7 @@ void main(int argc, char *argv[])
 	sprintf(outStr, "%d", ADMIT);
 	sprintf(outStr + strlen(outStr), "%d", getpid());
 	strcpy(buffer, outStr);
-	printf("CLIENT: Sending \"%s\" to server.\n", buffer);
+	// printf("CLIENT: Sending \"%s\" to server.\n", buffer);
 
 	send(clientSocket, &buffer, strlen(buffer), 0);
 	bytesRcv = recv(clientSocket, buffer, 200, 0);
@@ -99,15 +99,15 @@ void main(int argc, char *argv[])
 	// Request a admission to the fair.  If cannot get in (i.e., MAX_GUESTS reached), then quit.
 	if (buffer[0] == '0')
 	{
-		printf("not admitted\n");
+		// printf("not admitted\n");
 		return;
 	}
 	else
 	{
 		// if admitted store the ride tickets into tickets[];
-		printf("admitted\n");
+		// printf("admitted\n");
 		buffer[bytesRcv] = 0;
-		printf("%s\n", buffer);
+		// printf("%s\n", buffer);
 		char *p = strtok(buffer, " ");
 		int i = 0;
 		while (p)
@@ -147,7 +147,7 @@ void main(int argc, char *argv[])
 		sprintf(outStr + strlen(outStr), "%d", rideId);
 		strcpy(buffer, outStr);
 		// buffer[2] = 0;
-		printf("Request waitTime: Sending \"%s\" to server.\n", buffer);
+		printf("%d request waitTime: Sending \"%s\" \n", getpid(), buffer);
 		connectServer();
 		send(clientSocket, buffer, strlen(buffer), 0);
 		// memset(buffer, 0, sizeof(buffer));
@@ -155,17 +155,18 @@ void main(int argc, char *argv[])
 		buffer[bytesRcv] = 0;
 		close(clientSocket);
 		int waitTime = atoi(buffer);
-		printf("**recived waitTime: %d\n", waitTime);
+		printf("**Received rideID : %d waitTime: %d\n", rideId, waitTime);
 		// close(clientSocket);
 
 		// If the guest is willing to wait, then get into line for that ride
 		if (waitTime <= willWaitTime)
 		{
 			memset(outStr, 0, sizeof(outStr));
-			sprintf(outStr, "%d", GET_IN_LINE);
-			sprintf(outStr + strlen(outStr), "%d", getpid());
+			sprintf(outStr, "%d %d  %d", GET_IN_LINE,  rideId, getpid());
+			// sprintf(outStr + strlen(outStr), "%d", getpid());
 			strcpy(buffer, outStr);
-			printf("requestGetInLine: Sending \"%s\" to server.\n", buffer);
+			printf("GetInLine: guest: %d rideID: %d\n", getpid(), rideId);
+			printf("%s\n", buffer);
 			connectServer();
 			send(clientSocket, buffer, strlen(buffer), 0);
 			bytesRcv = recv(clientSocket, buffer, 200, 0);
