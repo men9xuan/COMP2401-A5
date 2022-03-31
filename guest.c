@@ -20,27 +20,21 @@ int clientSocket;
 struct sockaddr_in serverAddress;
 int status, bytesRcv;
 char outStr[80];  // stores guest request
-char buffer[200]; //
+char buffer[200]; 
 
 void handleSig1(int i)
 {
-	wait--;
+	wait=1;
 }
 void handleSig2(int i)
 {
-	wait--;
+	wait=0;
 }
 
 // helper function for guest to connect to server
 void connectServer()
 {
 	// Set up client server
-	// int clientSocket;
-	// struct sockaddr_in serverAddress;
-	// int status, bytesRcv;
-	// char outStr[80];  // stores guest request
-	// char buffer[200]; //
-	// Create the client socket
 	clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (clientSocket < 0)
 	{
@@ -68,29 +62,22 @@ void main(int argc, char *argv[])
 	signal(SIGUSR1, handleSig1);
 	signal(SIGUSR2, handleSig2);
 
-	// Set the random seed
-	srand(time(NULL));
+	// Set the random seed using nano-seconds
+	// Otherwise guest will get same seed because they are generated so closely
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	srand((time_t)ts.tv_nsec);
 
 	// Get the number of tickets, willing wait time and first ride from the command line arguments
-	// ...
 	int ticketNum = atoi(argv[1]);
 	int willWaitTime = atoi(argv[2]);
 	int rideId = atoi(argv[3]);
-
 	int tickets[NUM_RIDES];
-
-	// Set up client server
-	// int clientSocket;
-	// struct sockaddr_in serverAddress;
-	// int status, bytesRcv;
-	// char outStr[80];  // stores guest request
-	// char buffer[200]; //
 	connectServer();
-
+	// send ADMIT and guest id to server
 	sprintf(outStr, "%d", ADMIT);
 	sprintf(outStr + strlen(outStr), "%d", getpid());
 	strcpy(buffer, outStr);
-	// printf("CLIENT: Sending \"%s\" to server.\n", buffer);
 
 	send(clientSocket, &buffer, strlen(buffer), 0);
 	bytesRcv = recv(clientSocket, buffer, 200, 0);
@@ -99,31 +86,26 @@ void main(int argc, char *argv[])
 	// Request a admission to the fair.  If cannot get in (i.e., MAX_GUESTS reached), then quit.
 	if (buffer[0] == '0')
 	{
-		// printf("not admitted\n");
 		return;
 	}
 	else
 	{
-		// if admitted store the ride tickets into tickets[];
-		// printf("admitted\n");
+		// if admitted convert returned string into tickets[];
 		buffer[bytesRcv] = 0;
-		// printf("%s\n", buffer);
 		char *p = strtok(buffer, " ");
 		int i = 0;
 		while (p)
 		{
-			// tickets[i++] = strtol(p, NULL, 10);
 			int temp = strtol(p, NULL, 10);
 			if (temp)
 			{
 				tickets[i++] = temp;
-				// printf("## %d\n", temp);
 			}
 			p = strtok(NULL, " ");
 		}
 	}
 
-	// Now simulate the going on rides until no more tickets remain (you will want to change the "1" here)
+	// Now simulate the going on rides until no more tickets remain
 	while (ticketNum > 0)
 	{
 		// Make sure that the guest has enough tickets for the desired ride
@@ -132,78 +114,57 @@ void main(int argc, char *argv[])
 		{
 			rideId = rand() % NUM_RIDES;
 		}
-
 		// Get wait time estimate for that ride
-		// ...
-		// status = connect(clientSocket, (struct sockaddr *)&serverAddress,
-		// 				 sizeof(serverAddress));
-		// if (status < 0)
-		// {
-		// 	printf("*** CLIENT ERROR: Could not connect.\n");
-		// 	exit(-1);
-		// }
 		memset(outStr, 0, sizeof(outStr));
 		sprintf(outStr, "%d", GET_WAIT_ESTIMATE);
 		sprintf(outStr + strlen(outStr), "%d", rideId);
 		strcpy(buffer, outStr);
-		// buffer[2] = 0;
-		printf("%d request waitTime: Sending \"%s\" \n", getpid(), buffer);
 		connectServer();
 		send(clientSocket, buffer, strlen(buffer), 0);
-		// memset(buffer, 0, sizeof(buffer));
+		memset(buffer, 0, sizeof(buffer));
 		bytesRcv = recv(clientSocket, buffer, 200, 0);
 		buffer[bytesRcv] = 0;
 		close(clientSocket);
 		int waitTime = atoi(buffer);
-		printf("**Received rideID : %d waitTime: %d\n", rideId, waitTime);
-		// close(clientSocket);
-
 		// If the guest is willing to wait, then get into line for that ride
 		if (waitTime <= willWaitTime)
 		{
+			// connect and send to server that the guest is willing to get in line
 			memset(outStr, 0, sizeof(outStr));
-			sprintf(outStr, "%d %d  %d", GET_IN_LINE,  rideId, getpid());
-			// sprintf(outStr + strlen(outStr), "%d", getpid());
+			sprintf(outStr, "%d %d  %d", GET_IN_LINE, rideId, getpid());
 			strcpy(buffer, outStr);
-			printf("GetInLine: guest: %d rideID: %d\n", getpid(), rideId);
-			printf("%s\n", buffer);
 			connectServer();
 			send(clientSocket, buffer, strlen(buffer), 0);
 			bytesRcv = recv(clientSocket, buffer, 200, 0);
-			// buffer[bytesRcv] = 0;
 			close(clientSocket);
 			if (buffer[0] == '1')
 			{
 				ticketNum -= tickets[rideId];
 				// Wait until the ride has boarded this guest, completed the ride and unboarded the guest
 				wait = 2;
-
+				// Wait till the USRIG1 and USRSIG2
 				while (wait == 2)
 				{
-					// printf("waiting 2\n");
 					sleep(1);
 				}
 				while (wait == 1)
 				{
-					// printf("waiting 1\n");
-					sleep(1); //???
+					sleep(1);
 				}
 			}
 		}
-
+		// pick next ride 
+		rideId = rand() % NUM_RIDES;
 		// Delay a bit (DO NOT CHANGE THIS LINE)
 		usleep(100000);
-		// usleep(1000000);
-		rideId = rand() % NUM_RIDES;
-		// ...
 	}
 
 	// When out of tickets, inform the Fair that you are leaving
+	// sent LEAVE_FAIR and guestId to server 
 	memset(outStr, 0, sizeof(outStr));
 	sprintf(outStr, "%d", LEAVE_FAIR);
 	sprintf(outStr + strlen(outStr), "%d", getpid());
 	strcpy(buffer, outStr);
-	printf("LeaveFair: Sending \"%s\" to server.\n", buffer);
 	connectServer();
 	send(clientSocket, buffer, strlen(buffer), 0);
 	close(clientSocket);

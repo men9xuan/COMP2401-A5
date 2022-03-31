@@ -10,8 +10,8 @@
 #include "ride.c"
 #include "requestHandler.c"
 #include "display.c"
+sem_t serverBusyIndicator;
 
-sem_t   serverBusyIndicator;
 // Initialize a ride
 void initializeRide(Ride *r, char *n, unsigned char tr, unsigned char cap, unsigned char onOff, unsigned short rt, unsigned short wt)
 {
@@ -36,7 +36,12 @@ void initializeRide(Ride *r, char *n, unsigned char tr, unsigned char cap, unsig
 int main()
 {
 	// Initialize semaphore
-	sem_init(&serverBusyIndicator, 0, 1);
+	// sem_t   serverBusyIndicator;
+	if (sem_init(&serverBusyIndicator, 0, 1) < 0)
+	{
+		printf("Error: on semaphore init.\n");
+		exit(1);
+	}
 	// Create a fair with no guests
 	Fair ottawaFair;
 	ottawaFair.numGuests = 0;
@@ -73,31 +78,20 @@ int main()
 	pthread_join(handler, NULL);
 
 	// Shutdown the ride threads and free up the riders arrays
-	// ...
 	for (int i = 0; i < NUM_RIDES; i++)
 	{
-		// ((Ride *)&rideThreads[i])->status = OFF_LINE;
+		// set all ride to OFF_LINE
 		ottawaFair.rides[i].status = OFF_LINE;
+		// free pthreads
 		pthread_join(rideThreads[i], NULL);
 		free(((ottawaFair.rides[i]).riders));
 	}
 	// pthread_join(display, NULL);
 
 	// Kill all the guest processes for any guests remaining
-	// ... // MAX_GUESTS
 	for (int i = 0; i < ottawaFair.numGuests; i++)
 	{
 		kill(ottawaFair.guestIDs[i], SIGKILL);
 	}
-
-	// free pthreads
-	// pthread_join(display, NULL);
-	// // pthread_exit(&display);
-	// for (int i = 0; i < NUM_RIDES; i++)
-	// {
-	// 	pthread_join(rideThreads[i], NULL);
-	// 	// pthread_exit(&rideThreads[i]);
-	// }
-
 	printf("FAIR APP: ended successfully\n");
 }

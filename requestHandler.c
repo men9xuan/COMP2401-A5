@@ -4,7 +4,7 @@
 #include <semaphore.h>
 #include <arpa/inet.h>
 
-// #include "fair.h"
+extern sem_t   serverBusyIndicator;
 
 // Handle client requests coming in through the server socket.  This code should run
 // indefinitiely.  It should wait for a client to send a request, process it, and then
@@ -31,14 +31,12 @@
 void *handleIncomingRequests(void *x)
 {
   Fair *oFair = (Fair *)x;
-  // Replace the code below with your own code
   int serverSocket, clientSocket;
   struct sockaddr_in serverAddress, clientAddress;
   int status, addrSize, bytesRcv;
   char inStr[80];
   char buffer[80];
   char outStr[200];
-  // char *response = "OK";
   // Create the client socket
   serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket < 0)
@@ -71,13 +69,9 @@ void *handleIncomingRequests(void *x)
 
   addrSize = sizeof(clientAddress);
 
-
   // Wait for clients now
   printf("Fair server online\n");
   int run = 1;
-  // int rideId = -1;
-  // int pid;
-  // int counter = 0;
   while (run)
   {
     // Get the message from the client
@@ -92,22 +86,22 @@ void *handleIncomingRequests(void *x)
 
     switch (buffer[0] - '0')
     {
-    case SHUTDOWN: 
+    case SHUTDOWN:
       run = 0;
       break;
     case ADMIT:
     {
       if (((Fair *)x)->numGuests < MAX_GUESTS)
       {
-        // sem_wait(&serverBusyIndicator);
+        sem_wait(&serverBusyIndicator);
         int pid = atoi(buffer + 1);
         oFair->guestIDs[oFair->numGuests] = pid;
         // printf("pid: %d\n", pid);
         oFair->numGuests++;
-        // sem_post(&serverBusyIndicator);
+        sem_post(&serverBusyIndicator);
 
         // send list of ride names and tickets
-        memset(outStr, 0, sizeof(outStr)); 
+        memset(outStr, 0, sizeof(outStr));
         for (int i = 0; i < NUM_RIDES; i++)
         {
           sprintf(outStr + strlen(outStr), "%s", oFair->rides[i].name);
@@ -117,9 +111,7 @@ void *handleIncomingRequests(void *x)
       }
       else
       {
-        // not admitted park full
-        // char *response = "0";
-        // send(clientSocket, response, strlen(response), 0);
+        // not admitted park full send back '0'
         memset(outStr, 0, sizeof(outStr));
         sprintf(outStr + strlen(outStr), "%d", 0);
         send(clientSocket, outStr, strlen(outStr), 0);
@@ -127,14 +119,10 @@ void *handleIncomingRequests(void *x)
       break;
     }
     case GET_WAIT_ESTIMATE:
-    { // ..
-      // printf("======\n");
+    { 
       int rideId = atoi(buffer + 1);
-      // printf("ride Id: %d", rideId);
       int waitTime = (oFair->rides[rideId].lineupSize) / (oFair->rides[rideId].capacity) *
                      ((oFair->rides[rideId].onOffTime) + (oFair->rides[rideId].waitTime) + (oFair->rides[rideId].rideTime));
-      // printf("lineupSize: %d\n", oFair->rides[rideId].lineupSize);
-      // printf("  Wait time: %d\n", waitTime);
       memset(outStr, 0, sizeof(outStr));
       sprintf(outStr + strlen(outStr), "%d", waitTime);
       send(clientSocket, outStr, strlen(outStr), 0);
@@ -145,18 +133,14 @@ void *handleIncomingRequests(void *x)
     {
       int pid = atoi(buffer + 5);
       int rideId = atoi(buffer + 2);
-      printf("RECEIVED ride ID : %d , GUEST ID : %d\n", rideId, pid);
       if (rideId >= 0 && rideId < NUM_RIDES && (oFair->rides[rideId].lineupSize) < MAX_LINEUP)
       {
-        // add to waitingLine
-        // printf("****** guestId:%d ****rideId:%d  \n", pid, rideId);
+        sem_wait(&serverBusyIndicator);
         oFair->rides[rideId].waitingLine[oFair->rides[rideId].lineupSize] = pid;
         oFair->rides[rideId].lineupSize++;
+        sem_post(&serverBusyIndicator);
         memset(outStr, 0, sizeof(outStr));
         sprintf(outStr + strlen(outStr), "%d", 1);
-        // send back the wait time
-        // printf("countdown time: %d\n", oFair->rides[rideId].countdownTimer);
-        // sprintf(outStr + strlen(outStr), "%d", oFair->rides[rideId].countdownTimer);
         send(clientSocket, outStr, strlen(outStr), 0);
       }
       else
@@ -169,7 +153,8 @@ void *handleIncomingRequests(void *x)
       break;
     }
     case LEAVE_FAIR:
-    { 
+    {
+      sem_wait(&serverBusyIndicator);
       int pid = atoi(buffer + 1);
       for (int i = 0; i < (oFair->numGuests); i++)
       {
@@ -184,6 +169,7 @@ void *handleIncomingRequests(void *x)
           oFair->numGuests--;
         }
       }
+      sem_post(&serverBusyIndicator);
       break;
     }
     }

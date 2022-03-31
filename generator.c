@@ -23,8 +23,8 @@ void main()
 		int firstRide = rand() % NUM_RIDES;
 		// ...
 		char command[50];
+		// generate system command string
 		sprintf(command, "./guest %d %d %d &", ticketsNum, waitTime, firstRide);
-		// printf("%s\n", command);
 		system(command);
 		usleep(10000); // Keep this 1/100 second delay between guest creation
 	}
