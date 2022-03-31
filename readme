@@ -1,0 +1,27 @@
+Mengxuan Shi 
+101216702 
+
+List of files:
+    -display.c
+    -display.h
+    -makefile
+    -rrtMaker.c
+    -rrtTester.c
+    -obstacles.h
+    
+Compile Instructions:
+
+make 
+
+Run Instructions:
+
+./rrtTester <growthLength> <maxNodes> <enviromentVariable>
+  command-line arguments are:
+  growthLength:  the edge growth length for each tree branch 
+  maxNodes: the maximum number of tree nodes to create
+  enviromentVariable: the environment number to test [1-5]
+
+Mem Test Instructions:
+
+valgrind ./rrtTester 25 200 1 leakcheck==yes
+
