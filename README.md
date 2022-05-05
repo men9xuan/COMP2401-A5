@@ -1,7 +1,5 @@
 ## Fair Simulator
 
-5th assignment of COMP2401 W22 
-
 This c program simulates a Fair that allows Guests to go onto Rides in the Fair. 
 
 This program utilizes threads to handle incoming requests. ```fairApp.c``` spawns a thread for each ride and a display thread to display the fair information. 
