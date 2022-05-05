@@ -10,9 +10,11 @@ This program utilizes threads to handle incoming requests. ```fairApp.c``` spawn
 
 A guest thread simulates the process of a gueset taking rides until he/she runs out of tickets.
 
-### Screenshots 
+### Screenshots
 
+<img src="https://github.com/men9xuan/COMP2401-A5/raw/main/screenshot.png" width="500" >
 
+<img src="https://github.com/men9xuan/COMP2401-A5/raw/main/screenrecord.gif" width="500" >
 
 ### Usage:
 
