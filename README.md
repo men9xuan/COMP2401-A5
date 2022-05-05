@@ -18,7 +18,7 @@ A guest thread simulates the process of a gueset taking rides until he/she runs 
 
 Compile Instruction
 
-```make```
+> ```make```
 
 Run Instructions:
 1. start up fair server in the background
