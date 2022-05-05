@@ -8,7 +8,7 @@ This program utilizes threads to handle incoming requests. ```fairApp.c``` spawn
 
 ```generator.c``` calls ```guest.c``` to create a thread for each guest that connects to the fair server.
 
-A guest thread simulates the process of a gueset taking rides until he/she runs out of tickets.
+A guest thread simulates the process of a guest taking rides until he/she runs out of tickets.
 
 ### Screenshots
 
